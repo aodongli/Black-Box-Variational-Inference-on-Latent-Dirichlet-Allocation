@@ -33,13 +33,21 @@ def lda_inference(doc, lda_model, adagrad=True):
         # sample S theta
         sample_theta = np.random.dirichlet(var_gamma, S)
 
+        # sample S z for each word n
+        sample_zs = np.zeros([doc.length, S], dtype=np.int32)
+        for n in range(doc.length):
+            # sample S z for each word
+            sample_z = np.random.multinomial(1, phi[n,:], S) # S * k matrix
+            which_j = np.argmax(sample_z, 1) # S length vector
+            sample_zs[n,:] = which_j
+
         # compute gamma gradient
 
         dig = digamma(var_gamma)
         var_gamma_sum = np.sum(var_gamma)
         digsum = digamma(var_gamma_sum)
 
-        ln_theta = np.log(sample_theta)
+        ln_theta = np.log(sample_theta) # S * k matrix
 
         dqdg = ln_theta - dig + digsum # S * k matrix
 
@@ -49,28 +57,43 @@ def lda_inference(doc, lda_model, adagrad=True):
         ln_q_theta = dirichlet.logpdf(np.transpose(sample_theta), var_gamma)
                                 # S length vector
 
-        E_p_z = np.sum(ln_theta * np.sum(phi, 0), 1) # S length vector
+        # explicitly evaluate expectation
+        # E_p_z = np.sum(ln_theta * np.sum(phi, 0), 1) # S length vector
+
+        # monte-carlo estimated expectation
+        E_p_z = np.zeros(S) # S length vector
+        for sample_id in range(S):
+            cur_ln_theta = ln_theta[sample_id,:]
+            sampled_ln_theta = []
+            for n in range(doc.length):
+                which_j = sample_zs[n,:]
+                sampled_ln_theta += list(cur_ln_theta[which_j]) # (doc.counts[n] * list(cur_ln_theta[which_j]))
+            E_p_z[sample_id] = np.average(sampled_ln_theta)
 
         grad_gamma = np.average(dqdg * np.reshape(ln_p_theta - ln_q_theta + E_p_z, (S, 1)), 0)
 
+        # update
         if adagrad:
             g_var_gamma += grad_gamma ** 2
             grad_gamma = grad_gamma / (np.sqrt(g_var_gamma) + epsilon)
-        var_gamma = var_gamma + rho * grad_gamma # update
+        var_gamma = var_gamma + rho * grad_gamma 
         
 
         # for phi
-        dig = digamma(var_gamma)
-        var_gamma_sum = np.sum(var_gamma)
-        digsum = digamma(var_gamma_sum)
+
+        # for explicit evaluation of expectation
+        # dig = digamma(var_gamma)
+        # var_gamma_sum = np.sum(var_gamma)
+        # digsum = digamma(var_gamma_sum)
+
+        # resample from updated gamma
+        sample_theta = np.random.dirichlet(var_gamma, S)
+        ln_theta = np.log(sample_theta) # S * k matrix
 
         for n in range(doc.length):
-            # sample S z for each word
-            # print phi[n,:]
-            sample_z = np.random.multinomial(1, phi[n,:], S) # S * k matrix
 
             # compute phi gradient
-            which_j = np.argmax(sample_z, 1)
+            which_j = sample_zs[n,:]
 
             dqdphi = 1 / phi[n][which_j] # S length vector
 
@@ -78,7 +101,15 @@ def lda_inference(doc, lda_model, adagrad=True):
 
             ln_q_phi = np.log(phi[n][which_j]) # S length vector
 
-            E_p_z_theta = dig[which_j] - digsum # S length vector
+            # explicitly evaluate expectation
+            # E_p_z_theta = dig[which_j] - digsum # S length vector
+
+            # monte-carlo estimated expectation
+            E_p_z_theta = np.zeros(S) # S length vector
+            for sample_id in range(S):
+                cur_ln_theta = ln_theta[sample_id,:]
+                E_p_z_theta += cur_ln_theta[which_j]
+            E_p_z_theta = E_p_z_theta / S
 
             # print( dqdphi.shape, ln_p_w.shape, ln_q_phi.shape, E_p_z_theta.shape)
             # print (lda_model.log_prob_w[which_j][:,doc.words[n]])
@@ -108,6 +139,7 @@ def lda_inference(doc, lda_model, adagrad=True):
     return likelihood
 
 def compute_likelihood(doc, lda_model, phi, var_gamma):
+    # an implementation reproducing lda-c code
     # var_gamma is a vector
     likelihood = 0
     digsum = 0
@@ -138,9 +170,9 @@ def compute_likelihood(doc, lda_model, phi, var_gamma):
 def main():
     corpus = read_data.read_corpus('./data/tmp.data')
     model = lda_model.load_model('./model/final')
-    with open('./data/bbvi_test_likelihood', 'a') as ofile:
+    with open('./data/bbvi_test_likelihood_all_sample', 'a') as ofile:
         for i in range(len(corpus)):
-            i = i + 41
+            # i = i + 41
             print i
             likelihood = lda_inference(corpus[i], model, False)
             ofile.write(str(likelihood) + '\n')
