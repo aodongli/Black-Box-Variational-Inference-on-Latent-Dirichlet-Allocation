@@ -3,7 +3,7 @@ import ast
 import numpy as np
 import matplotlib.pyplot as plt
 
-RESULTS_FOLDERS = ['./data/bbvi_test_likelihood',  './data/bbvi_test_likelihood_adagrad', './data/test_inf-lda-lhood']
+RESULTS_FOLDERS = ['./data/bbvi_test_likelihood_all_sample',  './data/bbvi_test_likelihood_adagrad', './data/test_inf-lda-lhood']
 
 SAVE_PATH = './plots/'
 
