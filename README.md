@@ -1,3 +1,7 @@
+---
+typora-copy-images-to: ../../../Multicore System/project/docs/presentation/paral_results.jpg
+---
+
 # Black-Box-Variational-Inference-on-Latent-Dirichlet-Allocation
 ### BBVI on LDA
 
@@ -44,7 +48,7 @@ python lda_inference.py
 
 * A speedup results on a sample of test dataset is shown below.
 
-  ![paral_results](/Users/owner/Desktop/interested courses/Multicore System/project/docs/presentation/paral_results.jpg)
+  ![paral_results](./plots/paral_results.jpg)
 
 ## Bugs report
 
