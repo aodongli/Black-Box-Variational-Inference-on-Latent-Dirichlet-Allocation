@@ -1,7 +1,3 @@
----
-typora-copy-images-to: ../../../Multicore System/project/docs/presentation/paral_results.jpg
----
-
 # Black-Box-Variational-Inference-on-Latent-Dirichlet-Allocation
 ### BBVI on LDA
 
